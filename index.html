@@ -14,6 +14,7 @@
       --warn: #f59e0b;
       --bad: #ef4444;
       --line: rgba(255,255,255,0.16);
+      --blue: #60a5fa;
     }
     * { box-sizing: border-box; }
     body {
@@ -30,11 +31,11 @@
     .sub { margin-top: 4px; color: var(--muted); font-size: 14px; }
     main {
       display: grid;
-      grid-template-columns: 1.35fr 0.65fr;
+      grid-template-columns: 1.25fr 0.75fr;
       gap: 14px;
       padding: 14px;
     }
-    @media (max-width: 900px) {
+    @media (max-width: 950px) {
       main { grid-template-columns: 1fr; }
     }
     .card {
@@ -58,7 +59,8 @@
       width: 100%;
       height: 100%;
       object-fit: cover;
-      transform: scaleX(-1);
+      /* Do NOT mirror. Mirroring caused the skeleton to be offset from the rower. */
+      transform: none;
     }
     canvas { pointer-events: none; }
     .controls { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
@@ -71,6 +73,7 @@
       font-size: 14px;
     }
     button.primary { background: #2563eb; border-color: #3b82f6; }
+    button.active { background: #065f46; border-color: #10b981; }
     .metricGrid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -95,9 +98,46 @@
     .cue.good { border-left-color: var(--good); }
     .cue.warn { border-left-color: var(--warn); }
     .cue.bad { border-left-color: var(--bad); }
+    .cue.info { border-left-color: var(--blue); }
     .cueTitle { font-weight: 700; }
-    .cueBody { color: var(--muted); margin-top: 3px; font-size: 14px; }
+    .cueBody { color: var(--muted); margin-top: 3px; font-size: 14px; line-height: 1.35; }
     .status { color: var(--muted); font-size: 13px; margin-top: 8px; min-height: 18px; }
+    .phaseList {
+      display: grid;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .phaseBox {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 10px;
+      background: rgba(255,255,255,0.04);
+    }
+    .phaseBox.current {
+      border-color: var(--blue);
+      box-shadow: 0 0 0 1px rgba(96,165,250,0.3) inset;
+    }
+    .phaseTop {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      align-items: center;
+      font-weight: 700;
+    }
+    .badge {
+      font-size: 12px;
+      color: var(--muted);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 2px 7px;
+      white-space: nowrap;
+    }
+    .summary {
+      white-space: pre-line;
+      font-size: 14px;
+      color: var(--muted);
+      line-height: 1.35;
+    }
   </style>
 </head>
 <body>
@@ -114,7 +154,9 @@
       </div>
       <div class="controls">
         <button class="primary" id="startBtn" onclick="startCameraAndAnalysis()">Start camera + analysis</button>
-        <button id="calibrateBtn">Calibrate neutral posture</button>
+        <button id="voiceBtn" onclick="toggleVoice()">Voice coaching: off</button>
+        <button id="summaryBtn" onclick="speakSessionSummary()">Speak summary</button>
+        <button id="resetBtn" onclick="resetSession()">Reset session</button>
         <select id="sideSelect">
           <option value="right">Rower faces right</option>
           <option value="left">Rower faces left</option>
@@ -129,17 +171,26 @@
     </section>
 
     <aside class="card">
-      <h2 style="margin:0 0 8px;font-size:18px;">Live Stroke Readout</h2>
+      <h2 style="margin:0 0 8px;font-size:18px;">Coach View</h2>
       <div class="metricGrid">
-        <div class="metric"><div class="label">Stroke phase</div><div class="value" id="phase">—</div></div>
+        <div class="metric"><div class="label">Stable phase</div><div class="value" id="phase">—</div></div>
         <div class="metric"><div class="label">Rate estimate</div><div class="value" id="rate">—</div></div>
-        <div class="metric"><div class="label">Body angle</div><div class="value" id="trunk">—</div></div>
-        <div class="metric"><div class="label">Knee angle</div><div class="value" id="knee">—</div></div>
+        <div class="metric"><div class="label">Stroke count</div><div class="value" id="strokeCount">0</div></div>
+        <div class="metric"><div class="label">Primary focus</div><div class="value" id="focus">—</div></div>
       </div>
-      <div id="cues"></div>
-      <div class="cue">
-        <div class="cueTitle">Setup notes</div>
-        <div class="cueBody">Best accuracy requires side view, stable lighting, full body visible, and handle/chain roughly parallel to the image plane.</div>
+
+      <div id="mainCue" class="cue info">
+        <div class="cueTitle">Waiting for stroke data</div>
+        <div class="cueBody">Start rowing. The app will hold each coaching point long enough to read and will speak phase-specific feedback if voice coaching is on.</div>
+      </div>
+
+      <h3 style="font-size:16px;margin:14px 0 0;">Phase feedback</h3>
+      <div class="phaseList" id="phaseList"></div>
+
+      <h3 style="font-size:16px;margin:14px 0 0;">Session summary</h3>
+      <div id="sessionSummary" class="cue">
+        <div class="cueTitle">No completed strokes yet</div>
+        <div class="cueBody summary">Complete several strokes for a meaningful pattern.</div>
       </div>
     </aside>
   </main>
@@ -151,24 +202,46 @@
     const statusEl = document.getElementById("status");
     const phaseEl = document.getElementById("phase");
     const rateEl = document.getElementById("rate");
-    const trunkEl = document.getElementById("trunk");
-    const kneeEl = document.getElementById("knee");
-    const cuesEl = document.getElementById("cues");
+    const strokeCountEl = document.getElementById("strokeCount");
+    const focusEl = document.getElementById("focus");
+    const mainCueEl = document.getElementById("mainCue");
+    const phaseListEl = document.getElementById("phaseList");
+    const sessionSummaryEl = document.getElementById("sessionSummary");
     const skillSelect = document.getElementById("skillSelect");
+    const voiceBtn = document.getElementById("voiceBtn");
 
     let PoseLandmarker, FilesetResolver, DrawingUtils;
     let poseLandmarker;
     let webcamRunning = false;
     let lastVideoTime = -1;
-    let previousPhase = "unknown";
+    let rawPhase = "unknown";
+    let stablePhase = "unknown";
+    let pendingPhase = "unknown";
+    let pendingPhaseSince = 0;
+    let lastCueChange = 0;
+    let lastSpokenAt = 0;
+    let voiceOn = false;
     let catchTimes = [];
     let recent = [];
+    let strokes = [];
+    let currentStroke = newStroke();
 
     const L = {
       leftShoulder: 11, rightShoulder: 12, leftElbow: 13, rightElbow: 14,
       leftWrist: 15, rightWrist: 16, leftHip: 23, rightHip: 24,
       leftKnee: 25, rightKnee: 26, leftAnkle: 27, rightAnkle: 28
     };
+
+    const phaseOrder = ["catch", "drive", "finish", "recovery"];
+
+    function newStroke() {
+      return {
+        startedAt: performance.now(),
+        phases: {},
+        issues: {},
+        maxSeverity: "good"
+      };
+    }
 
     function setStatus(msg) { statusEl.textContent = msg; }
 
@@ -181,7 +254,6 @@
 
     function pt(landmarks, idx) { return landmarks[idx]; }
     function mid(a, b) { return { x: (a.x + b.x)/2, y: (a.y + b.y)/2, z: ((a.z || 0) + (b.z || 0))/2 }; }
-    function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
 
     function angleDeg(a, b, c) {
       const ab = { x: a.x - b.x, y: a.y - b.y };
@@ -203,6 +275,10 @@
 
     function strictness() {
       return { novice: 1.25, competitive: 1.0, elite: 0.8 }[skillSelect.value] || 1;
+    }
+
+    function severityRank(level) {
+      return { good: 0, info: 1, warn: 2, bad: 3 }[level] ?? 0;
     }
 
     async function initPose() {
@@ -229,10 +305,11 @@
     async function start() {
       setStatus("Start button clicked. Checking browser camera support...");
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        setStatus("Camera API unavailable. Open the GitHub Pages HTTPS URL in Chrome, not the GitHub repo page or a local file.");
+        setStatus("Camera API unavailable. Open the GitHub Pages HTTPS URL in Chrome.");
         return;
       }
       if (!poseLandmarker) await initPose();
+
       setStatus("Requesting camera permission...");
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } },
@@ -241,7 +318,7 @@
       video.srcObject = stream;
       await video.play();
       webcamRunning = true;
-      setStatus("Camera active. Analyzing pose...");
+      setStatus("Camera active. Analyzing pose. Voice coaching is optional.");
       requestAnimationFrame(loop);
     }
 
@@ -252,10 +329,34 @@
       });
     };
 
+    window.toggleVoice = function() {
+      voiceOn = !voiceOn;
+      voiceBtn.textContent = voiceOn ? "Voice coaching: on" : "Voice coaching: off";
+      voiceBtn.classList.toggle("active", voiceOn);
+      if (voiceOn) speak("Voice coaching on.");
+      else window.speechSynthesis?.cancel();
+    };
+
+    function speak(text, force=false) {
+      if (!voiceOn && !force) return;
+      if (!("speechSynthesis" in window)) {
+        setStatus("Speech synthesis is not available in this browser.");
+        return;
+      }
+      const now = performance.now();
+      if (!force && now - lastSpokenAt < 3500) return;
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.rate = 0.95;
+      u.pitch = 1.0;
+      window.speechSynthesis.speak(u);
+      lastSpokenAt = now;
+    }
+
     function resizeCanvas() {
       const rect = video.getBoundingClientRect();
-      canvas.width = rect.width * devicePixelRatio;
-      canvas.height = rect.height * devicePixelRatio;
+      canvas.width = Math.round(rect.width * devicePixelRatio);
+      canvas.height = Math.round(rect.height * devicePixelRatio);
       ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
     }
 
@@ -266,38 +367,62 @@
       const ankle = mid(pt(lm, L.leftAnkle), pt(lm, L.rightAnkle));
       const elbow = mid(pt(lm, L.leftElbow), pt(lm, L.rightElbow));
       const wrist = mid(pt(lm, L.leftWrist), pt(lm, L.rightWrist));
+
       return {
         shoulder, hip, knee, ankle, elbow, wrist,
         kneeAngle: angleDeg(hip, knee, ankle),
         hipAngle: angleDeg(shoulder, hip, knee),
         elbowAngle: angleDeg(shoulder, elbow, wrist),
-        trunkAngle: lineAngleDeg(hip, shoulder),
-        reach: dist(shoulder, wrist)
+        trunkAngle: lineAngleDeg(hip, shoulder)
       };
     }
 
-    function inferPhase(m) {
+    function inferRawPhase(m) {
       recent.push({ ...m, t: performance.now() });
       if (recent.length > 45) recent.shift();
 
       const kneeNow = movingAvg(recent, "kneeAngle", 4);
       const kneePrev = recent.length > 10 ? recent[recent.length - 10].kneeAngle : kneeNow;
       const kneeVelocity = kneeNow - kneePrev;
-      let phase = previousPhase;
 
+      let phase = rawPhase;
       if (m.kneeAngle < 78) phase = "catch";
       else if (kneeVelocity > 4 && m.kneeAngle < 165) phase = "drive";
-      else if (m.kneeAngle >= 165 && m.elbowAngle < 145) phase = "finish";
+      else if (m.kneeAngle >= 165 && m.elbowAngle < 148) phase = "finish";
       else if (kneeVelocity < -3) phase = "recovery";
       else if (!phase || phase === "unknown") phase = "transition";
 
-      if (phase === "catch" && previousPhase !== "catch") {
+      rawPhase = phase;
+      return phase;
+    }
+
+    function stabilizePhase(phase) {
+      const now = performance.now();
+      if (phase !== pendingPhase) {
+        pendingPhase = phase;
+        pendingPhaseSince = now;
+      }
+      if (phase !== stablePhase && now - pendingPhaseSince > 250) {
+        const previousStable = stablePhase;
+        stablePhase = phase;
+        onStablePhaseChange(previousStable, stablePhase);
+      }
+      return stablePhase;
+    }
+
+    function onStablePhaseChange(previous, phase) {
+      if (phase === "catch" && previous !== "catch") {
         const now = performance.now();
         catchTimes.push(now);
         catchTimes = catchTimes.filter(t => now - t < 30000);
+
+        if (Object.keys(currentStroke.phases).length > 1) {
+          strokes.push(currentStroke);
+          if (strokes.length > 50) strokes.shift();
+        }
+        currentStroke = newStroke();
+        updateSummary();
       }
-      previousPhase = phase;
-      return phase;
     }
 
     function rateEstimate() {
@@ -308,39 +433,166 @@
       return Math.round(60000 / avg).toString();
     }
 
-    function generateCues(m, phase) {
+    function analyzePhase(m, phase) {
       const s = strictness();
-      const cues = [];
 
-      if (phase === "drive" && m.kneeAngle < 145 && m.elbowAngle < 160) {
-        cues.push({ level: "bad", title: "Arms are bending too early", body: "Push the legs first. Keep elbows long until the knees are almost down, then swing and draw." });
+      if (phase === "catch") {
+        if (m.kneeAngle < 58 * s) {
+          return { level: "warn", key: "overCompression", title: "Catch: over-compressed", body: "Do not chase extra length by collapsing. Stop the slide just before shins pass vertical, brace, then push." };
+        }
+        if (m.hipAngle < 40) {
+          return { level: "warn", key: "collapsedCatch", title: "Catch: hips/chest collapsed", body: "Sit taller at the front end. Think chest through, lats connected, arms long." };
+        }
+        return { level: "good", key: "goodCatch", title: "Catch: connected", body: "Good front-end position. Keep the catch light and direct, then push through the footboards." };
       }
-      if (phase === "catch" && m.kneeAngle < 58 * s) {
-        cues.push({ level: "warn", title: "Over-compressed at the catch", body: "Stop sliding just before the shins pass vertical. Load the legs without collapsing the hips." });
+
+      if (phase === "drive") {
+        if (m.kneeAngle < 145 && m.elbowAngle < 160) {
+          return { level: "bad", key: "earlyArmBend", title: "Drive: arms bending early", body: "Legs first. Keep elbows long until the knees are nearly down, then swing the body and draw." };
+        }
+        if (m.kneeAngle < 135 && Math.abs(m.trunkAngle) > 78) {
+          return { level: "warn", key: "earlyBodyOpen", title: "Drive: body opening early", body: "Hold the forward body angle for the first part of the drive. Sequence should be legs, body, arms." };
+        }
+        return { level: "good", key: "goodDrive", title: "Drive: good sequence", body: "Good. Keep pressure connected through the legs before opening the hips." };
       }
-      if (phase === "drive" && m.kneeAngle < 135 && Math.abs(m.trunkAngle) > 78) {
-        cues.push({ level: "warn", title: "Body opening early", body: "Hold the forward body angle as the legs begin the drive. Sequence should be legs, body, arms." });
+
+      if (phase === "finish") {
+        if (m.hipAngle < 120) {
+          return { level: "warn", key: "crampedFinish", title: "Finish: cramped posture", body: "Sit tall. Draw the handle to lower ribs without collapsing the chest or shrugging." };
+        }
+        if (m.elbowAngle > 155) {
+          return { level: "warn", key: "weakFinish", title: "Finish: draw not completed", body: "Finish the stroke with the elbows past the body and handle controlled to the lower ribs." };
+        }
+        return { level: "good", key: "goodFinish", title: "Finish: controlled", body: "Good finish. Keep it clean and avoid over-laying back." };
       }
-      if (phase === "recovery" && m.elbowAngle < 155 && m.kneeAngle < 150) {
-        cues.push({ level: "bad", title: "Knees rising before hands clear", body: "Recover as hands away, body over, then knees. Let the handle clear the knees before the slide rolls forward." });
+
+      if (phase === "recovery") {
+        if (m.elbowAngle < 155 && m.kneeAngle < 150) {
+          return { level: "bad", key: "kneesEarly", title: "Recovery: knees rising early", body: "Hands away first, then body over, then knees. Let the handle clear the knees before sliding forward." };
+        }
+        return { level: "good", key: "goodRecovery", title: "Recovery: organized", body: "Good recovery order. Keep the slide controlled so you are ready to push again." };
       }
-      if (phase === "finish" && m.hipAngle < 120) {
-        cues.push({ level: "warn", title: "Finish may be cramped", body: "Sit tall at the finish. Draw handle to lower ribs without collapsing the chest." });
-      }
-      if (cues.length === 0) {
-        cues.push({ level: "good", title: "No major sequencing fault detected", body: "Keep strokes long, connected, and repeatable. Confirm with PM5 split and force curve." });
-      }
-      return cues.slice(0, 3);
+
+      return { level: "info", key: "transition", title: "Transition", body: "Collecting stroke data." };
     }
 
-    function renderCues(cues) {
-      cuesEl.innerHTML = cues.map(c => `
-        <div class="cue ${c.level}">
-          <div class="cueTitle">${c.title}</div>
-          <div class="cueBody">${c.body}</div>
-        </div>
-      `).join("");
+    function recordCue(phase, cue) {
+      if (!phaseOrder.includes(phase)) return;
+
+      currentStroke.phases[phase] = cue;
+      if (cue.key && !cue.key.startsWith("good")) {
+        currentStroke.issues[cue.key] = (currentStroke.issues[cue.key] || 0) + 1;
+      }
+      if (severityRank(cue.level) > severityRank(currentStroke.maxSeverity)) {
+        currentStroke.maxSeverity = cue.level;
+      }
+
+      const previous = currentStroke.phases[phase];
+      return previous;
     }
+
+    function updateMainCue(cue, phase) {
+      const now = performance.now();
+      // Hold cues for readability; update immediately for bad cues.
+      const currentTitle = mainCueEl.querySelector(".cueTitle")?.textContent || "";
+      if (cue.level !== "bad" && now - lastCueChange < 1600 && currentTitle !== "Waiting for stroke data") return;
+
+      mainCueEl.className = "cue " + cue.level;
+      mainCueEl.innerHTML = `<div class="cueTitle">${cue.title}</div><div class="cueBody">${cue.body}</div>`;
+      lastCueChange = now;
+
+      if (cue.level === "bad" || cue.level === "warn") {
+        speak(cue.body);
+      } else if (phase === "catch" || phase === "drive") {
+        speak(cue.title.replace(":", "."));
+      }
+    }
+
+    function updatePhaseList(activePhase) {
+      const boxes = phaseOrder.map(p => {
+        const cue = currentStroke.phases[p] || { level: "info", title: p[0].toUpperCase() + p.slice(1), body: "Waiting for this phase." };
+        return `
+          <div class="phaseBox ${p === activePhase ? "current" : ""}">
+            <div class="phaseTop">
+              <span>${cue.title}</span>
+              <span class="badge">${p}</span>
+            </div>
+            <div class="cueBody">${cue.body}</div>
+          </div>
+        `;
+      });
+      phaseListEl.innerHTML = boxes.join("");
+    }
+
+    function summarizeIssues() {
+      const issueCounts = {};
+      for (const stroke of strokes) {
+        for (const [key, count] of Object.entries(stroke.issues)) {
+          issueCounts[key] = (issueCounts[key] || 0) + count;
+        }
+      }
+
+      const labels = {
+        earlyArmBend: "early arm bend on the drive",
+        earlyBodyOpen: "opening the body too early",
+        kneesEarly: "knees rising before hands clear",
+        overCompression: "over-compression at the catch",
+        collapsedCatch: "catch collapse",
+        crampedFinish: "cramped finish",
+        weakFinish: "incomplete finish draw"
+      };
+
+      const sorted = Object.entries(issueCounts).sort((a,b) => b[1] - a[1]);
+      if (!sorted.length) return { focus: "clean", text: "No repeated major fault detected yet." };
+
+      const [topKey, topCount] = sorted[0];
+      return {
+        focus: labels[topKey] || topKey,
+        text: `Primary pattern: ${labels[topKey] || topKey}.\nObserved ${topCount} time${topCount === 1 ? "" : "s"} across ${strokes.length} completed stroke${strokes.length === 1 ? "" : "s"}.\nNext stroke focus: ${nextAction(topKey)}`
+      };
+    }
+
+    function nextAction(key) {
+      const actions = {
+        earlyArmBend: "legs first; keep elbows long until knees are nearly down.",
+        earlyBodyOpen: "hold body angle through the first half of the leg drive.",
+        kneesEarly: "hands away, body over, then let the knees rise.",
+        overCompression: "stop sliding before shins pass vertical.",
+        collapsedCatch: "sit taller and connect the lats before the push.",
+        crampedFinish: "finish tall with handle to lower ribs.",
+        weakFinish: "complete the draw before the recovery begins."
+      };
+      return actions[key] || "keep the stroke long and repeatable.";
+    }
+
+    function updateSummary() {
+      strokeCountEl.textContent = strokes.length.toString();
+      const summary = summarizeIssues();
+      focusEl.textContent = summary.focus === "clean" ? "Clean" : summary.focus.split(" ").slice(0, 2).join(" ");
+      sessionSummaryEl.innerHTML = `<div class="cueTitle">${strokes.length} completed stroke${strokes.length === 1 ? "" : "s"}</div><div class="cueBody summary">${summary.text}</div>`;
+    }
+
+    window.speakSessionSummary = function() {
+      const summary = summarizeIssues();
+      speak(summary.text.replace(/\n/g, " "), true);
+    };
+
+    window.resetSession = function() {
+      strokes = [];
+      currentStroke = newStroke();
+      catchTimes = [];
+      recent = [];
+      stablePhase = "unknown";
+      rawPhase = "unknown";
+      strokeCountEl.textContent = "0";
+      rateEl.textContent = "—";
+      phaseEl.textContent = "—";
+      focusEl.textContent = "—";
+      mainCueEl.className = "cue info";
+      mainCueEl.innerHTML = `<div class="cueTitle">Session reset</div><div class="cueBody">Start rowing again to build a new summary.</div>`;
+      updatePhaseList("unknown");
+      updateSummary();
+    };
 
     function draw(lm) {
       resizeCanvas();
@@ -354,33 +606,34 @@
 
     async function loop() {
       if (!webcamRunning) return;
+
       if (video.currentTime !== lastVideoTime) {
         lastVideoTime = video.currentTime;
         const result = poseLandmarker.detectForVideo(video, performance.now());
+
         if (result.landmarks && result.landmarks.length) {
           const lm = result.landmarks[0];
           draw(lm);
+
           const metrics = extractMetrics(lm);
-          const phase = inferPhase(metrics);
+          const raw = inferRawPhase(metrics);
+          const phase = stabilizePhase(raw);
+          const cue = analyzePhase(metrics, phase);
+          recordCue(phase, cue);
+
           phaseEl.textContent = phase;
           rateEl.textContent = rateEstimate();
-          trunkEl.textContent = Number.isFinite(metrics.trunkAngle) ? `${Math.round(metrics.trunkAngle)}°` : "—";
-          kneeEl.textContent = Number.isFinite(metrics.kneeAngle) ? `${Math.round(metrics.kneeAngle)}°` : "—";
-          renderCues(generateCues(metrics, phase));
+          updateMainCue(cue, phase);
+          updatePhaseList(phase);
         } else {
           setStatus("Camera active, but no body pose detected. Move farther back or improve lighting.");
         }
       }
+
       requestAnimationFrame(loop);
     }
 
-    document.getElementById("calibrateBtn").addEventListener("click", () => {
-      if (!recent.length) {
-        setStatus("Start analysis first, then tap calibrate.");
-        return;
-      }
-      setStatus("Calibration saved placeholder. Future version will use this to personalize thresholds.");
-    });
+    updatePhaseList("unknown");
   </script>
 </body>
 </html>
