@@ -1,374 +1,386 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>RowErg Technique Coach MVP</title>
-<style>
-:root {
---bg: #0f172a;
---panel: #111827;
---text: #e5e7eb;
---muted: #94a3b8;
---good: #22c55e;
---warn: #f59e0b;
---bad: #ef4444;
---line: rgba(255,255,255,0.16);
-}
-* { box-sizing: border-box; }
-body {
-margin: 0;
-font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-background: var(--bg);
-color: var(--text);
-}
-header {
-padding: 16px 18px 8px;
-border-bottom: 1px solid var(--line);
-}
-h1 { margin: 0; font-size: 22px; }
-.sub { margin-top: 4px; color: var(--muted); font-size: 14px; }
-main {
-display: grid;
-grid-template-columns: 1.35fr 0.65fr;
-gap: 14px;
-padding: 14px;
-}
-@media (max-width: 900px) {
-main { grid-template-columns: 1fr; }
-}
-.card {
-background: var(--panel);
-border: 1px solid var(--line);
-border-radius: 16px;
-padding: 14px;
-box-shadow: 0 10px 28px rgba(0,0,0,0.25);
-}
-.videoWrap {
-position: relative;
-width: 100%;
-aspect-ratio: 16 / 9;
-overflow: hidden;
-border-radius: 14px;
-background: #020617;
-}
-video, canvas {
-position: absolute;
-inset: 0;
-width: 100%;
-height: 100%;
-object-fit: cover;
-transform: scaleX(-1);
-}
-canvas { pointer-events: none; }
-.controls { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
-button, select {
-border: 1px solid var(--line);
-background: #1f2937;
-color: var(--text);
-border-radius: 12px;
-padding: 10px 12px;
-font-size: 14px;
-}
-button.primary { background: #2563eb; border-color: #3b82f6; }
-.metricGrid {
-display: grid;
-grid-template-columns: repeat(2, minmax(0, 1fr));
-gap: 10px;
-margin-top: 10px;
-}
-.metric {
-padding: 10px;
-background: rgba(255,255,255,0.05);
-border-radius: 12px;
-border: 1px solid var(--line);
-}
-.metric .label { color: var(--muted); font-size: 12px; }
-.metric .value { font-size: 22px; margin-top: 4px; }
-.cue {
-padding: 12px;
-border-radius: 14px;
-margin-top: 10px;
-background: rgba(255,255,255,0.06);
-border-left: 5px solid var(--line);
-}
-.cue.good { border-left-color: var(--good); }
-.cue.warn { border-left-color: var(--warn); }
-.cue.bad { border-left-color: var(--bad); }
-.cueTitle { font-weight: 700; }
-.cueBody { color: var(--muted); margin-top: 3px; font-size: 14px; }
-.status { color: var(--muted); font-size: 13px; margin-top: 8px; min-height: 18px; }
-.small { color: var(--muted); font-size: 12px; line-height: 1.35; }
-</style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>RowErg Technique Coach MVP</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --panel: #111827;
+      --text: #e5e7eb;
+      --muted: #94a3b8;
+      --good: #22c55e;
+      --warn: #f59e0b;
+      --bad: #ef4444;
+      --line: rgba(255,255,255,0.16);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+    }
+    header {
+      padding: 16px 18px 8px;
+      border-bottom: 1px solid var(--line);
+    }
+    h1 { margin: 0; font-size: 22px; }
+    .sub { margin-top: 4px; color: var(--muted); font-size: 14px; }
+    main {
+      display: grid;
+      grid-template-columns: 1.35fr 0.65fr;
+      gap: 14px;
+      padding: 14px;
+    }
+    @media (max-width: 900px) {
+      main { grid-template-columns: 1fr; }
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 14px;
+      box-shadow: 0 10px 28px rgba(0,0,0,0.25);
+    }
+    .videoWrap {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      overflow: hidden;
+      border-radius: 14px;
+      background: #020617;
+    }
+    video, canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform: scaleX(-1);
+    }
+    canvas { pointer-events: none; }
+    .controls { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
+    button, select {
+      border: 1px solid var(--line);
+      background: #1f2937;
+      color: var(--text);
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-size: 14px;
+    }
+    button.primary { background: #2563eb; border-color: #3b82f6; }
+    .metricGrid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 10px;
+    }
+    .metric {
+      padding: 10px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 12px;
+      border: 1px solid var(--line);
+    }
+    .metric .label { color: var(--muted); font-size: 12px; }
+    .metric .value { font-size: 22px; margin-top: 4px; }
+    .cue {
+      padding: 12px;
+      border-radius: 14px;
+      margin-top: 10px;
+      background: rgba(255,255,255,0.06);
+      border-left: 5px solid var(--line);
+    }
+    .cue.good { border-left-color: var(--good); }
+    .cue.warn { border-left-color: var(--warn); }
+    .cue.bad { border-left-color: var(--bad); }
+    .cueTitle { font-weight: 700; }
+    .cueBody { color: var(--muted); margin-top: 3px; font-size: 14px; }
+    .status { color: var(--muted); font-size: 13px; margin-top: 8px; min-height: 18px; }
+  </style>
 </head>
 <body>
-<header>
-<h1>RowErg Technique Coach MVP</h1>
-<div class="sub">Side-view camera analysis for Concept2 RowErg sequencing, posture, and 2k-relevant efficiency cues.</div>
-</header>
+  <header>
+    <h1>RowErg Technique Coach MVP</h1>
+    <div class="sub">Side-view camera analysis for Concept2 RowErg sequencing, posture, and 2k-relevant efficiency cues.</div>
+  </header>
 
-<main>
-<section class="card">
-<div class="videoWrap">
-<video id="video" autoplay playsinline muted></video>
-<canvas id="overlay"></canvas>
-</div>
-<div class="controls">
-<button class="primary" id="startBtn">Start camera + analysis</button>
-<button id="calibrateBtn">Calibrate neutral posture</button>
-<select id="sideSelect" title="Camera side">
-<option value="right">Rower faces right</option>
-<option value="left">Rower faces left</option>
-</select>
-<select id="skillSelect" title="Strictness">
-<option value="novice">Lenient scoring</option>
-<option value="competitive" selected>Competitive scoring</option>
-<option value="elite">Strict scoring</option>
-</select>
-</div>
-<div class="status" id="status">Place tablet 8–12 feet away, side-on, with hips, knees, ankles, shoulders, elbows, and wrists visible.</div>
-</section>
+  <main>
+    <section class="card">
+      <div class="videoWrap">
+        <video id="video" autoplay playsinline muted></video>
+        <canvas id="overlay"></canvas>
+      </div>
+      <div class="controls">
+        <button class="primary" id="startBtn" onclick="startCameraAndAnalysis()">Start camera + analysis</button>
+        <button id="calibrateBtn">Calibrate neutral posture</button>
+        <select id="sideSelect">
+          <option value="right">Rower faces right</option>
+          <option value="left">Rower faces left</option>
+        </select>
+        <select id="skillSelect">
+          <option value="novice">Lenient scoring</option>
+          <option value="competitive" selected>Competitive scoring</option>
+          <option value="elite">Strict scoring</option>
+        </select>
+      </div>
+      <div class="status" id="status">Place tablet 8–12 feet away, side-on, with hips, knees, ankles, shoulders, elbows, and wrists visible.</div>
+    </section>
 
-<aside class="card">
-<h2 style="margin:0 0 8px;font-size:18px;">Live Stroke Readout</h2>
-<div class="metricGrid">
-<div class="metric"><div class="label">Stroke phase</div><div class="value" id="phase">—</div></div>
-<div class="metric"><div class="label">Rate estimate</div><div class="value" id="rate">—</div></div>
-<div class="metric"><div class="label">Body angle</div><div class="value" id="trunk">—</div></div>
-<div class="metric"><div class="label">Knee angle</div><div class="value" id="knee">—</div></div>
-</div>
+    <aside class="card">
+      <h2 style="margin:0 0 8px;font-size:18px;">Live Stroke Readout</h2>
+      <div class="metricGrid">
+        <div class="metric"><div class="label">Stroke phase</div><div class="value" id="phase">—</div></div>
+        <div class="metric"><div class="label">Rate estimate</div><div class="value" id="rate">—</div></div>
+        <div class="metric"><div class="label">Body angle</div><div class="value" id="trunk">—</div></div>
+        <div class="metric"><div class="label">Knee angle</div><div class="value" id="knee">—</div></div>
+      </div>
+      <div id="cues"></div>
+      <div class="cue">
+        <div class="cueTitle">Setup notes</div>
+        <div class="cueBody">Best accuracy requires side view, stable lighting, full body visible, and handle/chain roughly parallel to the image plane.</div>
+      </div>
+    </aside>
+  </main>
 
-<div id="cues"></div>
+  <script>
+    const video = document.getElementById("video");
+    const canvas = document.getElementById("overlay");
+    const ctx = canvas.getContext("2d");
+    const statusEl = document.getElementById("status");
+    const phaseEl = document.getElementById("phase");
+    const rateEl = document.getElementById("rate");
+    const trunkEl = document.getElementById("trunk");
+    const kneeEl = document.getElementById("knee");
+    const cuesEl = document.getElementById("cues");
+    const skillSelect = document.getElementById("skillSelect");
 
-<div class="cue">
-<div class="cueTitle">Setup notes</div>
-<div class="cueBody">Best accuracy requires side view, stable lighting, full body visible, and handle/chain roughly parallel to the image plane. This MVP uses body landmarks only; PM5 power curve integration should be added next.</div>
-</div>
-</aside>
-</main>
+    let PoseLandmarker, FilesetResolver, DrawingUtils;
+    let poseLandmarker;
+    let webcamRunning = false;
+    let lastVideoTime = -1;
+    let previousPhase = "unknown";
+    let catchTimes = [];
+    let recent = [];
 
-<script type="module">
-import { PoseLandmarker, FilesetResolver, DrawingUtils } from "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14";
+    const L = {
+      leftShoulder: 11, rightShoulder: 12, leftElbow: 13, rightElbow: 14,
+      leftWrist: 15, rightWrist: 16, leftHip: 23, rightHip: 24,
+      leftKnee: 25, rightKnee: 26, leftAnkle: 27, rightAnkle: 28
+    };
 
-const video = document.getElementById("video");
-const canvas = document.getElementById("overlay");
-const ctx = canvas.getContext("2d");
-const startBtn = document.getElementById("startBtn");
-const calibrateBtn = document.getElementById("calibrateBtn");
-const statusEl = document.getElementById("status");
-const phaseEl = document.getElementById("phase");
-const rateEl = document.getElementById("rate");
-const trunkEl = document.getElementById("trunk");
-const kneeEl = document.getElementById("knee");
-const cuesEl = document.getElementById("cues");
-const skillSelect = document.getElementById("skillSelect");
+    function setStatus(msg) { statusEl.textContent = msg; }
 
-let poseLandmarker;
-let webcamRunning = false;
-let lastVideoTime = -1;
-let neutral = null;
-let previousPhase = "unknown";
-let catchTimes = [];
-let recent = [];
+    window.onerror = function(message, source, lineno) {
+      setStatus("JavaScript error: " + message + " at line " + lineno);
+    };
+    window.onunhandledrejection = function(event) {
+      setStatus("App error: " + (event.reason?.message || event.reason));
+    };
 
-const L = {
-leftShoulder: 11, rightShoulder: 12,
-leftElbow: 13, rightElbow: 14,
-leftWrist: 15, rightWrist: 16,
-leftHip: 23, rightHip: 24,
-leftKnee: 25, rightKnee: 26,
-leftAnkle: 27, rightAnkle: 28
-};
+    function pt(landmarks, idx) { return landmarks[idx]; }
+    function mid(a, b) { return { x: (a.x + b.x)/2, y: (a.y + b.y)/2, z: ((a.z || 0) + (b.z || 0))/2 }; }
+    function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
 
-function pt(landmarks, idx) { return landmarks[idx]; }
-function mid(a, b) { return { x: (a.x + b.x)/2, y: (a.y + b.y)/2, z: ((a.z || 0) + (b.z || 0))/2 }; }
-function dist(a, b) { return Math.hypot(a.x - b.x, a.y - b.y); }
-function angleDeg(a, b, c) {
-const ab = { x: a.x - b.x, y: a.y - b.y };
-const cb = { x: c.x - b.x, y: c.y - b.y };
-const dot = ab.x * cb.x + ab.y * cb.y;
-const mag = Math.hypot(ab.x, ab.y) * Math.hypot(cb.x, cb.y);
-if (!mag) return NaN;
-return Math.acos(Math.max(-1, Math.min(1, dot / mag))) * 180 / Math.PI;
-}
-function lineAngleDeg(a, b) {
-// 0 is horizontal; positive values lean down in image coordinates.
-return Math.atan2(b.y - a.y, b.x - a.x) * 180 / Math.PI;
-}
-function movingAvg(arr, key, n = 8) {
-const vals = arr.slice(-n).map(x => x[key]).filter(Number.isFinite);
-return vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : NaN;
-}
-function strictness() {
-return { novice: 1.25, competitive: 1.0, elite: 0.8 }[skillSelect.value] || 1;
-}
+    function angleDeg(a, b, c) {
+      const ab = { x: a.x - b.x, y: a.y - b.y };
+      const cb = { x: c.x - b.x, y: c.y - b.y };
+      const dot = ab.x * cb.x + ab.y * cb.y;
+      const mag = Math.hypot(ab.x, ab.y) * Math.hypot(cb.x, cb.y);
+      if (!mag) return NaN;
+      return Math.acos(Math.max(-1, Math.min(1, dot / mag))) * 180 / Math.PI;
+    }
 
-async function initPose() {
-const vision = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm");
-poseLandmarker = await PoseLandmarker.createFromOptions(vision, {
-baseOptions: {
-modelAssetPath: "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/latest/pose_landmarker_lite.task",
-delegate: "GPU"
-},
-runningMode: "VIDEO",
-numPoses: 1,
-minPoseDetectionConfidence: 0.55,
-minPosePresenceConfidence: 0.55,
-minTrackingConfidence: 0.55
-});
-}
+    function lineAngleDeg(a, b) {
+      return Math.atan2(b.y - a.y, b.x - a.x) * 180 / Math.PI;
+    }
 
-async function start() {
-if (!poseLandmarker) {
-statusEl.textContent = "Loading pose model...";
-await initPose();
-}
-const stream = await navigator.mediaDevices.getUserMedia({
-video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } },
-audio: false
-});
-video.srcObject = stream;
-await video.play();
-webcamRunning = true;
-statusEl.textContent = "Analyzing. Use side view. Keep the whole stroke in frame.";
-requestAnimationFrame(loop);
-}
+    function movingAvg(arr, key, n = 8) {
+      const vals = arr.slice(-n).map(x => x[key]).filter(Number.isFinite);
+      return vals.length ? vals.reduce((a,b)=>a+b,0)/vals.length : NaN;
+    }
 
-function resizeCanvas() {
-const rect = video.getBoundingClientRect();
-canvas.width = rect.width * devicePixelRatio;
-canvas.height = rect.height * devicePixelRatio;
-ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
-}
+    function strictness() {
+      return { novice: 1.25, competitive: 1.0, elite: 0.8 }[skillSelect.value] || 1;
+    }
 
-function extractMetrics(lm) {
-// Average left/right landmarks to reduce occlusion jitter from side view.
-const shoulder = mid(pt(lm, L.leftShoulder), pt(lm, L.rightShoulder));
-const hip = mid(pt(lm, L.leftHip), pt(lm, L.rightHip));
-const knee = mid(pt(lm, L.leftKnee), pt(lm, L.rightKnee));
-const ankle = mid(pt(lm, L.leftAnkle), pt(lm, L.rightAnkle));
-const elbow = mid(pt(lm, L.leftElbow), pt(lm, L.rightElbow));
-const wrist = mid(pt(lm, L.leftWrist), pt(lm, L.rightWrist));
+    async function initPose() {
+      setStatus("Loading MediaPipe pose model...");
+      const mod = await import("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14");
+      PoseLandmarker = mod.PoseLandmarker;
+      FilesetResolver = mod.FilesetResolver;
+      DrawingUtils = mod.DrawingUtils;
 
-const kneeAngle = angleDeg(hip, knee, ankle);
-const hipAngle = angleDeg(shoulder, hip, knee);
-const elbowAngle = angleDeg(shoulder, elbow, wrist);
-const trunkAngle = lineAngleDeg(hip, shoulder);
-const reach = dist(shoulder, wrist);
-const seatProxy = hip.x;
-const handleProxy = wrist.x;
-const compression = 180 - kneeAngle;
+      const vision = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.14/wasm");
+      poseLandmarker = await PoseLandmarker.createFromOptions(vision, {
+        baseOptions: {
+          modelAssetPath: "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/latest/pose_landmarker_lite.task",
+          delegate: "GPU"
+        },
+        runningMode: "VIDEO",
+        numPoses: 1,
+        minPoseDetectionConfidence: 0.55,
+        minPosePresenceConfidence: 0.55,
+        minTrackingConfidence: 0.55
+      });
+    }
 
-return { shoulder, hip, knee, ankle, elbow, wrist, kneeAngle, hipAngle, elbowAngle, trunkAngle, reach, seatProxy, handleProxy, compression };
-}
+    async function start() {
+      setStatus("Start button clicked. Checking browser camera support...");
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        setStatus("Camera API unavailable. Open the GitHub Pages HTTPS URL in Chrome, not the GitHub repo page or a local file.");
+        return;
+      }
+      if (!poseLandmarker) await initPose();
+      setStatus("Requesting camera permission...");
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: false
+      });
+      video.srcObject = stream;
+      await video.play();
+      webcamRunning = true;
+      setStatus("Camera active. Analyzing pose...");
+      requestAnimationFrame(loop);
+    }
 
-function inferPhase(m) {
-recent.push({ ...m, t: performance.now() });
-if (recent.length > 45) recent.shift();
-const kneeNow = movingAvg(recent, "kneeAngle", 4);
-const kneePrev = recent.length > 10 ? recent[recent.length - 10].kneeAngle : kneeNow;
-const kneeVelocity = kneeNow - kneePrev;
+    window.startCameraAndAnalysis = function() {
+      start().catch(err => {
+        console.error(err);
+        setStatus("Camera/model error: " + (err.message || err));
+      });
+    };
 
-let phase = previousPhase;
-if (m.kneeAngle < 78) phase = "catch";
-else if (kneeVelocity > 4 && m.kneeAngle < 165) phase = "drive";
-else if (m.kneeAngle >= 165 && m.elbowAngle < 145) phase = "finish";
-else if (kneeVelocity < -3) phase = "recovery";
-else if (!phase || phase === "unknown") phase = "transition";
+    function resizeCanvas() {
+      const rect = video.getBoundingClientRect();
+      canvas.width = rect.width * devicePixelRatio;
+      canvas.height = rect.height * devicePixelRatio;
+      ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+    }
 
-if (phase === "catch" && previousPhase !== "catch") {
-const now = performance.now();
-catchTimes.push(now);
-catchTimes = catchTimes.filter(t => now - t < 30000);
-}
-previousPhase = phase;
-return phase;
-}
+    function extractMetrics(lm) {
+      const shoulder = mid(pt(lm, L.leftShoulder), pt(lm, L.rightShoulder));
+      const hip = mid(pt(lm, L.leftHip), pt(lm, L.rightHip));
+      const knee = mid(pt(lm, L.leftKnee), pt(lm, L.rightKnee));
+      const ankle = mid(pt(lm, L.leftAnkle), pt(lm, L.rightAnkle));
+      const elbow = mid(pt(lm, L.leftElbow), pt(lm, L.rightElbow));
+      const wrist = mid(pt(lm, L.leftWrist), pt(lm, L.rightWrist));
+      return {
+        shoulder, hip, knee, ankle, elbow, wrist,
+        kneeAngle: angleDeg(hip, knee, ankle),
+        hipAngle: angleDeg(shoulder, hip, knee),
+        elbowAngle: angleDeg(shoulder, elbow, wrist),
+        trunkAngle: lineAngleDeg(hip, shoulder),
+        reach: dist(shoulder, wrist)
+      };
+    }
 
-function rateEstimate() {
-if (catchTimes.length < 2) return "—";
-const intervals = [];
-for (let i = 1; i < catchTimes.length; i++) intervals.push(catchTimes[i] - catchTimes[i-1]);
-const avg = intervals.reduce((a,b)=>a+b,0) / intervals.length;
-return Math.round(60000 / avg).toString();
-}
+    function inferPhase(m) {
+      recent.push({ ...m, t: performance.now() });
+      if (recent.length > 45) recent.shift();
 
-function generateCues(m, phase) {
-const s = strictness();
-const cues = [];
+      const kneeNow = movingAvg(recent, "kneeAngle", 4);
+      const kneePrev = recent.length > 10 ? recent[recent.length - 10].kneeAngle : kneeNow;
+      const kneeVelocity = kneeNow - kneePrev;
+      let phase = previousPhase;
 
-const earlyArmBend = phase === "drive" && m.kneeAngle < 145 && m.elbowAngle < 160;
-if (earlyArmBend) cues.push({ level: "bad", title: "Arms are bending too early", body: "Push the legs first. Keep elbows long until the knees are almost down, then swing and draw." });
+      if (m.kneeAngle < 78) phase = "catch";
+      else if (kneeVelocity > 4 && m.kneeAngle < 165) phase = "drive";
+      else if (m.kneeAngle >= 165 && m.elbowAngle < 145) phase = "finish";
+      else if (kneeVelocity < -3) phase = "recovery";
+      else if (!phase || phase === "unknown") phase = "transition";
 
-const overCompressed = phase === "catch" && m.kneeAngle < 58 * s;
-if (overCompressed) cues.push({ level: "warn", title: "Over-compressed at the catch", body: "Stop sliding just before the shins pass vertical. Load the legs without collapsing the hips." });
+      if (phase === "catch" && previousPhase !== "catch") {
+        const now = performance.now();
+        catchTimes.push(now);
+        catchTimes = catchTimes.filter(t => now - t < 30000);
+      }
+      previousPhase = phase;
+      return phase;
+    }
 
-const laybackEarly = phase === "drive" && m.kneeAngle < 135 && Math.abs(m.trunkAngle) > 78;
-if (laybackEarly) cues.push({ level: "warn", title: "Body opening early", body: "Hold the forward body angle as the legs begin the drive. Sequence should be legs, body, arms." });
+    function rateEstimate() {
+      if (catchTimes.length < 2) return "—";
+      const intervals = [];
+      for (let i = 1; i < catchTimes.length; i++) intervals.push(catchTimes[i] - catchTimes[i-1]);
+      const avg = intervals.reduce((a,b)=>a+b,0) / intervals.length;
+      return Math.round(60000 / avg).toString();
+    }
 
-const kneesEarlyRecovery = phase === "recovery" && m.elbowAngle < 155 && m.kneeAngle < 150;
-if (kneesEarlyRecovery) cues.push({ level: "bad", title: "Knees rising before hands clear", body: "Recover as hands away, body over, then knees. Let the handle clear the knees before the slide rolls forward." });
+    function generateCues(m, phase) {
+      const s = strictness();
+      const cues = [];
 
-const finishPosture = phase === "finish" && m.hipAngle < 120;
-if (finishPosture) cues.push({ level: "warn", title: "Finish may be cramped", body: "Sit tall at the finish. Draw handle to lower ribs without collapsing the chest or hunching shoulders." });
+      if (phase === "drive" && m.kneeAngle < 145 && m.elbowAngle < 160) {
+        cues.push({ level: "bad", title: "Arms are bending too early", body: "Push the legs first. Keep elbows long until the knees are almost down, then swing and draw." });
+      }
+      if (phase === "catch" && m.kneeAngle < 58 * s) {
+        cues.push({ level: "warn", title: "Over-compressed at the catch", body: "Stop sliding just before the shins pass vertical. Load the legs without collapsing the hips." });
+      }
+      if (phase === "drive" && m.kneeAngle < 135 && Math.abs(m.trunkAngle) > 78) {
+        cues.push({ level: "warn", title: "Body opening early", body: "Hold the forward body angle as the legs begin the drive. Sequence should be legs, body, arms." });
+      }
+      if (phase === "recovery" && m.elbowAngle < 155 && m.kneeAngle < 150) {
+        cues.push({ level: "bad", title: "Knees rising before hands clear", body: "Recover as hands away, body over, then knees. Let the handle clear the knees before the slide rolls forward." });
+      }
+      if (phase === "finish" && m.hipAngle < 120) {
+        cues.push({ level: "warn", title: "Finish may be cramped", body: "Sit tall at the finish. Draw handle to lower ribs without collapsing the chest." });
+      }
+      if (cues.length === 0) {
+        cues.push({ level: "good", title: "No major sequencing fault detected", body: "Keep strokes long, connected, and repeatable. Confirm with PM5 split and force curve." });
+      }
+      return cues.slice(0, 3);
+    }
 
-if (cues.length === 0) cues.push({ level: "good", title: "No major sequencing fault detected", body: "Keep strokes long, connected, and repeatable. Confirm with PM5 split and force curve." });
-return cues.slice(0, 3);
-}
+    function renderCues(cues) {
+      cuesEl.innerHTML = cues.map(c => `
+        <div class="cue ${c.level}">
+          <div class="cueTitle">${c.title}</div>
+          <div class="cueBody">${c.body}</div>
+        </div>
+      `).join("");
+    }
 
-function renderCues(cues) {
-cuesEl.innerHTML = cues.map(c => &lt;div class="cue ${c.level}">
-<div class="cueTitle">${c.title}&lt;/div&gt; &lt;div class="cueBody"&gt;${c.body}</div>
-</div>
-`).join("");
-}
+    function draw(lm) {
+      resizeCanvas();
+      const w = canvas.clientWidth;
+      const h = canvas.clientHeight;
+      ctx.clearRect(0, 0, w, h);
+      const drawingUtils = new DrawingUtils(ctx);
+      drawingUtils.drawConnectors(lm, PoseLandmarker.POSE_CONNECTIONS, { color: "#60a5fa", lineWidth: 3 });
+      drawingUtils.drawLandmarks(lm, { color: "#f8fafc", lineWidth: 1, radius: 3 });
+    }
 
-function draw(lm) {
-resizeCanvas();
-const w = canvas.clientWidth;
-const h = canvas.clientHeight;
-ctx.clearRect(0, 0, w, h);
-const drawingUtils = new DrawingUtils(ctx);
-drawingUtils.drawConnectors(lm, PoseLandmarker.POSE_CONNECTIONS, { color: "#60a5fa", lineWidth: 3 });
-drawingUtils.drawLandmarks(lm, { color: "#f8fafc", lineWidth: 1, radius: 3 });
-}
+    async function loop() {
+      if (!webcamRunning) return;
+      if (video.currentTime !== lastVideoTime) {
+        lastVideoTime = video.currentTime;
+        const result = poseLandmarker.detectForVideo(video, performance.now());
+        if (result.landmarks && result.landmarks.length) {
+          const lm = result.landmarks[0];
+          draw(lm);
+          const metrics = extractMetrics(lm);
+          const phase = inferPhase(metrics);
+          phaseEl.textContent = phase;
+          rateEl.textContent = rateEstimate();
+          trunkEl.textContent = Number.isFinite(metrics.trunkAngle) ? `${Math.round(metrics.trunkAngle)}°` : "—";
+          kneeEl.textContent = Number.isFinite(metrics.kneeAngle) ? `${Math.round(metrics.kneeAngle)}°` : "—";
+          renderCues(generateCues(metrics, phase));
+        } else {
+          setStatus("Camera active, but no body pose detected. Move farther back or improve lighting.");
+        }
+      }
+      requestAnimationFrame(loop);
+    }
 
-async function loop() {
-if (!webcamRunning) return;
-if (video.currentTime !== lastVideoTime) {
-lastVideoTime = video.currentTime;
-const result = poseLandmarker.detectForVideo(video, performance.now());
-if (result.landmarks && result.landmarks.length) {
-const lm = result.landmarks[0];
-draw(lm);
-const metrics = extractMetrics(lm);
-const phase = inferPhase(metrics);
-phaseEl.textContent = phase;
-rateEl.textContent = rateEstimate();
-trunkEl.textContent = Number.isFinite(metrics.trunkAngle) ? ``${Math.round(metrics.trunkAngle)}°: "—"; kneeEl.textContent = Number.isFinite(metrics.kneeAngle) ?${Math.round(metrics.kneeAngle)}° : "—";
-renderCues(generateCues(metrics, phase));
-} else {
-statusEl.textContent = "No pose detected. Move farther back or improve lighting.";
-}
-}
-requestAnimationFrame(loop);
-}
-
-calibrateBtn.addEventListener("click", () => {
-if (!recent.length) {
-statusEl.textContent = "Start analysis first, then sit tall at the finish/catch neutral position and tap calibrate.";
-return;
-}
-neutral = recent.slice(-15);
-statusEl.textContent = "Calibration saved. Future version will use this to personalize angle thresholds.";
-});
-
-startBtn.addEventListener("click", () => {
-start().catch(err => {
-console.error(err);
-statusEl.textContent = Camera/model error:${err.message}`;
-});
-});
-</script>
+    document.getElementById("calibrateBtn").addEventListener("click", () => {
+      if (!recent.length) {
+        setStatus("Start analysis first, then tap calibrate.");
+        return;
+      }
+      setStatus("Calibration saved placeholder. Future version will use this to personalize thresholds.");
+    });
+  </script>
 </body>
 </html>
